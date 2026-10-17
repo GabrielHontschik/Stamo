@@ -1,0 +1,133 @@
+---
+title: "Blatt 1"
+output: html_document
+date: "2026-10-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Aufgabe 1
+
+(d) Lesen Sie den in Aufgabe 2 beschriebenen Datensatz beink.dat in R ein und sch¨atzen Sie ein lineares Modell f¨ur beink mit allen anderen Variablen als Kovariablen. Stellen Sie die Residuen gegen die gesch¨atzten Werte dar und erstellen Sie einen QQ-Plot der Residuen. Welche der Annahmen aus (a) erscheinen fraglich?
+
+```{r}
+full_model <- lm(beink ~., data = df)
+summary(full_model)
+```
+
+```{r}
+res <- data.frame(true_values = df$beink,
+           pred_values = predict(full_model),
+           residuals = residuals(full_model))
+
+res %>% ggplot(aes(x = pred_values, y = residuals)) + geom_point(alpha = 0.8, color = "lightblue") +
+  geom_hline(yintercept = 0, color = "red") +
+  theme_minimal()
+```
+
+```{r}
+qqnorm(res$residuals)
+qqline(res$res, col = "red")
+```
+
+```         
+Annahme der Varianzhomogenität fraglich, da wir für größere Werte eine höhere Varianz beobachten als für kleine.
+Annahme der NV ebenfalls fraglich, da in den oberen Quantilen eine Starke Abweichung nach oben von den theoretischen Quantilen beobachten.
+```
+
+## Aufgabe 2
+
+(a) Lesen Sie den Datensatz in R ein und untersuchen Sie die Variable beink hinsichtlich der Gestalt ihrer Verteilung. Was f¨allt Ihnen dabei auf?
+
+```{r}
+df %>% ggplot(aes(x = beink)) + geom_histogram(bins = 30) + theme_minimal()
+```
+
+```         
+Verteilung rechtsschief.
+```
+
+(b) Im Folgenden soll die Variable beink als Responsevariable betrachtet werden. Begr¨unden Sie, weshalb die Gammaverteilung als Verteilungsannahme zur Modellierung dieser Zielvariable geeignet sein k¨onnte.
+
+```         
+Nur positive Werte möglich und Verteilung rechtsschief.
+```
+
+(d) Zeichnen Sie die Dichte einer gammaverteilten Zufallsgr¨oße Y f¨ur verschiedene Werte des shapeParameters, wobei f¨ur den Erwartungswert immer E(Y ) = 1 gelten soll. Verwenden Sie hierf¨ur die Funktion manipulate() aus dem R-Paket manipulate.
+
+```{r}
+manipulate({
+  curve(dgamma(x, shape = 1, rate = 1),
+      from = 0, to = 4,
+      ylim = c(0, 1.2),
+      col = 1, lwd = 2)
+
+for (a in 2:5) {
+  curve(dgamma(x, shape = a, rate = a),
+        add = TRUE, col = a, lwd = 2)
+}
+
+legend("topright",
+       legend = paste("α = β =", 1:5),
+       col = 1:5, lty = 1, lwd = 2)
+})
+
+```
+
+```{r}
+# Modell 1: inverser Link
+mod_inv <- glm(
+  beink ~ groesse + alter + dauer + verh +
+    geschl + deutsch + abitur,
+  data = df,
+  family = Gamma(link = "inverse")
+)
+
+# Modell 2: Log-Link
+mod_log <- glm(
+  beink ~ groesse + alter + dauer + verh +
+    geschl + deutsch + abitur,
+  data = df,
+  family = Gamma(link = "log")
+)
+
+summary(mod_inv)
+summary(mod_log)
+```
+
+```{r}
+AIC(mod_inv, mod_log)
+```
+
+```         
+Wir präferieren das inverse Modell.
+
+Inverse Modell:
+
+Intercept: 1.064e-03
+Wenn alle erklärenden Variablen den Wert 0 haben, beträgt das erwartete Einkommen 1 / 1.064e-03 = 939.8496
+
+Größe: -3.287e-06
+Bei einer Zunahme der Körpergröße um 1 cm sinkt der Kehrwert des erwarteten Einkommens (beink) um 3.287e-06, bei konstanten übrigen Variablen, wodurch das erwartete Einkommen steigt.
+
+Geschlecht: 1.419e-04
+Bei konstanten übrigen Variablen ist der Kehrwert des erwarteten Einkommens für Frauen (1) um 1.419e-04 höher als für Männer (0). Frauen haben somit ein geringeres erwartetes Einkommen.
+
+
+Log Modell - Koeffizient Größe: 
+
+Intercept: 6.2202325
+Wenn alle erklärenden Variablen den Wert 0 haben, beträgt das erwartete Einkommen: 
+exp(6.2202325) = 501 EUR
+
+Größe:0.0082530
+Bei einer Zunahme der Körpergröße um 1 cm steigt das erwartete Einkommen um:
+(exp(0.0082530) - 1) * 100% = 0.83%
+
+Geschlecht: -0.3179608
+Frauen (1) haben bei konstanten übrigen Variablen ein um
+(exp(-0.3179608) - 1) * 100% = - 27%
+geringeres erwartetes Einkommen als Männer (0).
+```
