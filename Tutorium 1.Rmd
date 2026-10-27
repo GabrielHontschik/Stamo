@@ -1,0 +1,43 @@
+---
+title: "Tutorium 1"
+output: html_document
+date: "2026-10-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Aufgabe 1: Struktur des linearen Modells
+
+(c) Fitten Sie model1 in R und interpretieren Sie die geschätzten Koeffizienten. Vergleichen Sie
+die Lage-Koeffizienten mit denen eines Modells, das nur lage enthält. Wie erklären Sie den
+Unterschied?
+
+```{r}
+model1_full <- lm(nm ~ wfl + lage, miete)
+model1_lage <- lm(nm ~ lage, miete)
+summary(model1_full)
+summary(model1_lage)
+```
+
+(d) Wir erweitern das Modell um eine Interaktion: model2 = nm ~ wfl * lage.
+
+```{r}
+model2 <- lm(nm ~ wfl * lage, miete)
+summary(model2)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

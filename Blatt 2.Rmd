@@ -1,0 +1,113 @@
+---
+title: "Blatt 2"
+output: html_document
+date: "2026-10-22"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Aufgabe 3
+
+(b) Zeichnen Sie mit Hilfe der Funktion dinvgauss() aus dem R-Paket
+    statmod die Dichte einer Invers-Gauß-verteilten Zufallsgr¨oße Y f¨ur
+    verschiedene Werte von λ, wobei f¨ur den Erwartungswert immer E(Y )
+    = 1 gelten soll. Verwenden Sie hierf¨ur die Funktion manipulate()
+    aus dem R-Paket manipulate.
+
+```{r}
+manipulate({
+  lambdas <- c(0.5, 1, 2, 5, a)
+
+  curve(dinvgauss(x, mean = 1, shape = lambdas[1]),
+        from = 0.01, to = 4,
+        ylim = c(0, 1.6), col = 1, lwd = 2)
+
+  for (i in 2:5) {
+    curve(dinvgauss(x, mean = 1, shape = lambdas[i]),
+          add = TRUE, col = i, lwd = 2)
+  }
+
+  legend("topright",
+         legend = paste("lambda =", lambdas),
+         col = 1:5, lty = 1, lwd = 2)
+},
+a = slider(0.1, 10, initial = 8, step = 0.1))
+```
+
+(c) Versuchen Sie nun, analog zu Aufgabe 2 auf Blatt 1 ein GLM mit
+    Invers-Gauß-verteiltem Response und nat¨urlichem Link zur
+    Modellierung der Variable beink aus dem Datensatz beink zu
+    sch¨atzen. Im Fall einer Fehlermeldung, erg¨anzen Sie Startwerte,
+    die Sie f¨ur sinnvoll halten. Verwenden Sie anschließend den
+    log-Link, um ein entsprechendes Modell zu sch¨atzen. Welches der
+    zwei Gamma- und zwei Invers-Gauß-Modelle passt am besten?
+
+```{r}
+# Startwerte auf der Link-Skala
+mu_start <- predict(mod_inv, type = "response")
+eta_start <- 1 / mu_start^2
+
+# Startkoeffizienten bestimmen
+beta_start <- coef(lm.fit(
+  x = model.matrix(mod_inv),
+  y = eta_start
+))
+
+# Inverses Gauß-GLM
+mod_ig_inv <- glm(
+  beink ~ groesse + alter + dauer + verh + geschl + deutsch + abitur,
+  data = df,
+  family = inverse.gaussian(link = "log"),
+  start = beta_start
+)
+
+summary(mod_ig_inv)
+```
+
+```{r}
+AIC(mod_inv, mod_log, mod_ig_inv)
+```
+
+(c) Fitten Sie mit Hilfe der Funktion glm() ein bin¨ares GLM mit
+    Logit-Link sowie ein bin¨ares GLM mit Probit-Link, das die Teilnahme
+    am Essensmarkenprogramm in Abh¨angigkeit der anderen Variablen
+    modelliert.
+
+```{r}
+model_logit <- glm(y ~ ., family = binomial(link = "logit"), data = foodstamp)
+
+model_probit <- glm(y ~ ., family = binomial(link = "probit"), data = foodstamp)
+
+summary(model_logit)
+summary(model_probit)
+```
+
+(d) Interpretieren Sie die mit dem Logit-Modell gesch¨atzten Parameter
+    anhand der Odds (Chancen) π/(1 − π).
+
+```{r}
+exp(coef(model_logit))
+```
+
+```         
+Interpretation:
+– exp(βˆ
+TEN) = 0.1720: Die Chance auf eine Teilnahme am Essensmarkenprogramm ist f¨ur
+eine Person in einem Mietverh¨altnis unter sonst gleichen Bedingungen durchschnittlich
+ca. 0.17-mal so hoch wie f¨ur eine Person, die nicht in einem Mietverh¨altnis steht.
+– exp(βˆ
+SUP) = 2.1711: Die Chance auf eine Teilnahme am Essensmarkenprogramm
+ist f¨ur eine Person, die Einkommensunterst¨utzung bezieht, unter sonst gleichen
+Bedingungen durchschnittlich ca. doppelt so groß wie f¨ur eine Person ohne
+Einkommensunterst¨utzung.
+– exp(βˆ
+INC) = 0.9985 bzw. exp(1000βˆ
+INC) = 0.2256: Die Chance auf eine Teilnahme am
+Essensmarkenprogramm ist f¨ur eine Person mit 1000 Dollar h¨oherem Einkommen unter
+sonst gleichen Bedingungen durchschnittlich nur noch ca. 0.2-mal so hoch.
+```
