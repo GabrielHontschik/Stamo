@@ -1,0 +1,101 @@
+---
+title: "Tutorium 2"
+output: html_document
+date: "2026-11-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Logistic Regression
+
+```{r}
+data("PhDPublications", package = "AER")
+phd <- PhDPublications
+```
+
+(a) Formulieren Sie ein Poisson-Regressionsmodell für articles mit allen übrigen Variablen als
+Kovariablen (Verteilungsannahme, linearer Prädiktor, Linkfunktion). Fitten Sie es in R und
+interpretieren Sie die Koeffizienten von kids und mentor.
+
+```{r}
+poisson_mod <- glm(articles ~., data = phd, family = "poisson")
+summary(poisson_mod)
+```
+
+```{r}
+exp(coefficients(poisson_mod)[c("kids", "mentor")])
+```
+```{}
+Für jedes zusätzliche Kind unter 6 Jahren, sinkt im Mittel die Anzahl der Artikel in den letzten drei Jahren der
+Promotion um den Faktor 0.83. (c.p)
+
+Erhöht sich die Anzahl der Artikel der Betreuungsperson in den letzten drei Jahren um 1, so steigt im Mittel 
+die Anzahl der Artikel in den letzten drei Jahren der Promotion um den Faktor 1.02. (c.p)
+```
+
+
+
+(b) Fitten Sie zum Vergleich ein lineares Modell mit denselben Kovariablen. Wie unterscheidet sich
+die Interpretation des Effekts von kids?
+
+```{r}
+linear_mod <- lm(articles ~., data = phd)
+summary(linear_mod)
+coefficients(linear_mod)["kids"]
+```
+
+```{}
+Für jedes zusätzliche Kind unter 6 Jahren, sinkt im Mittel die Anzahl der Artikel in den letzten drei Jahren der
+Promotion um 0.29. (c.p)
+```
+
+
+Stellen Sie die vorhergesagte Anzahl an Artikeln beider
+Modelle in Abhängigkeit von mentor dar (z. B. für einen unverheirateten Mann ohne Kinder mit
+durchschnittlichem Prestige). Was ist der wesentliche Unterschied?
+
+
+
+## Aufgabe 3: Logistische Regression und marginale Effekte
+
+Der Datensatz penguins aus dem R-Paket palmerpenguins enthält Messungen an Pinguinen dreier
+Arten (Adelie, Chinstrap, Gentoo). Wir modellieren die Wahrscheinlichkeit, dass ein Pinguin männlich
+ist, in Abhängigkeit von seinem Gewicht (in 100 g) und seiner Art.
+
+```{r}
+pinguine <- na.omit(palmerpenguins::penguins[, c("sex", "body_mass_g", "species")])
+pinguine$maennlich <- as.integer(pinguine$sex == "male")
+pinguine$gewicht <- pinguine$body_mass_g / 100 # Gewicht in 100 g
+```
+
+(a) Fitten Sie das Modell maennlich ~ gewicht + species als logistische Regression. Interpretieren
+Sie den Koeffizienten von gewicht auf der Skala der Log-Odds und der Odds. Ist die Aussage
+„Mit 100 g mehr Gewicht steigt die Wahrscheinlichkeit, männlich zu sein, um 0.74“ korrekt?
+
+```{r}
+logreg_mod <- glm(maennlich ~ gewicht + species, family = "binomial", data = pinguine)
+summary(logreg_mod)
+coefficients(logreg_mod)["gewicht"] |> exp()
+```
+
+```{}
+Erhöht sich das Gewicht um 100g, so erhöhen sich die Odds männlich zu sein um Faktor 2.09 (c.p.)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

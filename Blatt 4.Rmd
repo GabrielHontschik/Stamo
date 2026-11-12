@@ -1,0 +1,178 @@
+---
+title: "Übung 4"
+output: html_document
+date: "2026-11-12"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Aufgabe 7: Boston Housing-Daten mit Regularisierung
+
+Einer der bekanntesten und meistverwendeten Datens¨atze in der Statistik
+ist der Datensatz Boston (The Boston Housing Dataset), der Informationen
+zu Hauspreisen in Regionen um Boston enth¨alt und im R-Paket MASS
+enthalten ist. In dieser Aufgabe sollen die Median-Hauspreise medv in
+Abh¨angigkeit der restlichen 13 im Datensatz enthaltenen Variablen
+modelliert werden.
+
+```{r}
+boston <- MASS::Boston
+library(tidyverse)
+```
+
+(a) Machen Sie sich zun¨achst mit dem Datensatz vertraut. Unterteilen
+    Sie dann den Datensatz zuf¨allig in einen Trainings- und einen
+    Testdatensatz im Verh¨altnis 4:1, d.h. 80% der Daten sollen im
+    Trainingsdatensatz und 20% der Daten im Testdatensatz enthalten sein
+
+```{r}
+head(boston)
+names(boston)
+```
+
+```{r}
+train_proportion <- 0.8
+
+train_id <- sample.int(nrow(boston), round(nrow(boston) * train_proportion), replace = FALSE)
+
+boston_train <- boston[train_id, ]
+boston_test <- boston[-train_id, ]
+```
+
+(b) Passen Sie an den Trainingsdatensatz an.
+
+```{r}
+library(glmnet)
+```
+
+Verwenden Sie f¨ur (ii) und (iii) die Funktion cv.glmnet() aus dem
+R-Paket glmnet, die den Penalisierungsparameter λ per Kreuzvalidierung
+w¨ahlt. 
+
+(i) ein lineares Modell ohne Regularisierung,
+
+```{r}
+lin_mod <- lm(medv ~., data = boston_train)
+summary(lin_mod)
+```
+
+```{r}
+# In glmnet() we must first separate each dataset into a target vector and a matrix for the rest of the data.
+
+y_train <- boston_train$medv
+x_train <- as.matrix(boston_train[, names(boston_train) != "medv"])
+
+y_test <- boston_test$medv
+x_test <- as.matrix(boston_test[, names(boston_train) != "medv"])
+```
+
+(ii) ein Modell mit Ridge-Regularisierung
+(iii) ein Modell mit LASSO-Regularisierung
+
+```{r}
+ridge_mod <- cv.glmnet(x_train, y_train, alpha = 0, family = "gaussian")
+lasso_mod <- cv.glmnet(x_train, y_train, alpha = 1, family = "gaussian")
+ridge_mod
+lasso_mod
+```
+
+Geben Sie anhand des MSE an, welches Modell sich am genauesten
+an die Trainingsdaten anpasst und welches Modell die Testdaten am besten
+prognostiziert.
+
+```{r}
+# Test MSE
+
+pred_lin <- predict(object = lin_mod, newdata = boston_test)
+mse_pred_lin <- mean((y_test - pred_lin)^2)
+
+pred_ridge <- predict(object = ridge_mod, newx = x_test, s = "lambda.min")
+mse_pred_ridge <- mean((y_test - pred_ridge)^2)
+
+pred_lasso <- predict(object = lasso_mod, newx = x_test, s = "lambda.min")
+mse_pred_lasso <- mean((y_test - pred_lasso)^2)
+
+
+# Training MSE
+
+fit_lin <- mean(residuals(lin_mod)^2)
+
+fit_ridge <- predict(object = ridge_mod, newx = x_train, s = "lambda.min")
+mse_fit_ridge <- mean((y_train - fit_ridge)^2)
+
+fit_lasso <- predict(object = lasso_mod, newx = x_train, s = "lambda.min")
+mse_fit_lasso <- mean((y_train - fit_lasso)^2)
+
+
+# Comparison
+
+mse_comparison <- data.frame(
+  Model = c("Linear Model", "Ridge", "LASSO"),
+  Training_MSE = c(fit_lin, mse_fit_ridge, mse_fit_lasso),
+  Test_MSE = c(mse_pred_lin, mse_pred_ridge, mse_pred_lasso)
+)
+
+print(mse_comparison, digits = 3, row.names = FALSE)
+```
+
+(c) Veranschaulichen Sie die Koeffizientenpfade der Ridge- und der LASSO-Regularisierung in
+Abh¨angigkeit von λ. Beschreiben Sie den jeweiligen Verlauf und gehen Sie dabei auf die
+Unterschiede zwischen den beiden Regularisierungsformen ein.
+
+```{r}
+# Ridge coefficient paths
+plot(ridge_mod$glmnet.fit, xvar = "lambda",
+     main = "Ridge Coefficient Paths")
+
+# LASSO coefficient paths
+plot(lasso_mod$glmnet.fit, xvar = "lambda",
+     main = "LASSO Coefficient Paths")
+```
+
+```{r}
+# Ridge
+matplot(ridge_mod$lambda, t(as.matrix(ridge_mod$glmnet.fit$beta)),
+        type = "l", lty = 1,
+        xlab = "Lambda", ylab = "Coefficients",
+        main = "Ridge Coefficient Paths")
+
+# LASSO
+matplot(lasso_mod$lambda, t(as.matrix(lasso_mod$glmnet.fit$beta)),
+        type = "l", lty = 1,
+        xlab = "Lambda", ylab = "Coefficients",
+        main = "LASSO Coefficient Paths")
+
+```
+
+
+## Aufgabe 8: Regularisierung aus Bayes-Sicht
+
+Betrachtet wird das lineare Modell
+y | β ∼ Nn(Xβ, σ2I), β = (β0, β1, . . . , βp)⊤,
+mit bekannter Varianz σ2 > 0. 
+
+F¨ur die Koeffizienten β0, β1, . . . , βp werden a priori unabh¨angige
+und identische Verteilungen angenommen. Die Abbildung zeigt die beiden Prioris, die im Folgenden
+betrachtet werden (jeweils mit Varianz 1).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
