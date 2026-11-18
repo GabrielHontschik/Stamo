@@ -1,0 +1,159 @@
+---
+title: "Blatt 5"
+output: html_document
+date: "2026-11-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+## Aufgabe 9: Abhaengige Beobachtungen: GEE und gemischtes Modell
+
+Der auf der Moodle-Homepage verf¨ugbare Datensatz blutdruck2 enth¨alt fiktive Daten zu
+einem Medikamententest: 30 Personen erhielten nacheinander sechs ansteigende Dosen eines
+blutdrucksenkenden Medikaments. Alle begannen mit 10 mg und endeten mit 160 mg, die vier Dosen
+dazwischen wurden f¨ur jede Person zuf¨allig festgelegt. Nach jeder Dosis wurde der Blutdruck gemessen.
+
+(a) Stellen Sie die Blutdruckverl¨aufe der Personen mit ggplot dar und sch¨atzen Sie ein lineares
+Modell mit den Kovariablen Geschlecht und Dosis. Welche Modellannahme ist vermutlich
+verletzt? Pr¨ufen Sie dies anhand der Residuen.
+
+```{r}
+blutdruck %>%
+  ggplot(aes(x = Dosis, y = SBD, group = Person, color = Geschlecht)) +
+  geom_line() +
+  facet_wrap(~ Geschlecht) +
+  theme_minimal()
+```
+
+```{r}
+lin_mod <- lm(SBD ~ Dosis + Geschlecht, data = blutdruck)
+summary(lin_mod)
+```
+
+```{r}
+df <- data.frame(residuals = residuals(lin_mod),
+                 fitted_vals = predict(lin_mod))
+
+df %>% ggplot(aes(x = fitted_vals, y = residuals)) + geom_point() + theme_minimal() + geom_hline(yintercept = 0, colour = "blue")
+```
+
+```{r}
+blutdruck$resid <- residuals(lin_mod)
+
+ggplot(blutdruck, aes(x = Dosis, y = resid, group = Person)) +
+  geom_line(alpha = 0.5) +
+  geom_point() +
+  geom_hline(yintercept = 0, color = "red") +
+  facet_wrap(~ Person) + theme_minimal()
+```
+
+(b) Sch¨atzen Sie dasselbe Modell mit gee() aus dem Paket gee und IndependenceArbeitskorrelation. Vergleichen Sie mit (a).
+
+```{r}
+gee_ind_mod <- gee(SBD ~ Dosis + Geschlecht, id = Person, data = blutdruck, corstr = "independence")
+summary(gee_ind_mod)
+```
+
+(c) Sch¨atzen Sie das Modell erneut mit exchangeable und mit AR(1) Arbeitskorrelation. Was ¨andert
+sich gegen¨uber (b)?
+
+```{r}
+# Exchangeable: gleiche Korrelation zwischen allen Messungen einer Person
+gee_ex <- gee(SBD ~ Geschlecht + Dosis,
+              id = Person, data = blutdruck,
+              family = gaussian, corstr = "exchangeable")
+
+# AR(1): Korrelation nimmt mit dem zeitlichen Abstand ab
+gee_ar <- gee(SBD ~ Geschlecht + Dosis,
+              id = Person, data = blutdruck,
+              family = gaussian, corstr = "AR-M", Mv = 1)
+
+summary(gee_ex)
+summary(gee_ar)
+```
+
+(d) Modellieren Sie die Abh¨angigkeit nun explizit, zun¨achst mit festen Personeneffekten (DummyVariablen f¨ur Person), dann mit einem Random Intercept. Stellen Sie die Sch¨atzwerte und
+Standardfehler aller Modelle aus (a) bis (d) in einer Tabelle gegen¨uber.
+
+```{r}
+library(lme4)
+
+# LM mit festen Personeneffekten
+lm_fe <- lm(SBD ~ Geschlecht + Dosis + factor(Person),
+            data = blutdruck)
+
+# LMM mit Random Intercept
+lmm_ri <- lmer(SBD ~ Geschlecht + Dosis + (1 | Person),
+               data = blutdruck)
+
+# Extrahiert Koeffizienten und Standardfehler
+get_lm <- function(m) coef(summary(m))[, 1:2]
+get_lmm <- function(m) coef(summary(m))[, 1:2]
+get_gee <- function(m) cbind(
+  Estimate = m$coefficients,
+  SE = sqrt(diag(m$robust.variance))
+)
+
+# Tabelle zusammenstellen
+models <- list(
+  LM = get_lm(lin_mod),
+  GEE_Ind = get_gee(gee_ind_mod),
+  GEE_Ex = get_gee(gee_ex),
+  GEE_AR1 = get_gee(gee_ar),
+  LM_FE = get_lm(lm_fe),
+  LMM_RI = get_lmm(lmm_ri)
+)
+
+# Nur die gemeinsamen interessierenden Koeffizienten
+terms <- c("(Intercept)", "Geschlechtmale", "Dosis")
+
+result <- do.call(rbind, lapply(names(models), function(name) {
+  m <- models[[name]]
+  data.frame(
+    Modell = name,
+    Koeffizient = terms,
+    Schaetzer = m[match(terms, rownames(m)), 1],
+    SE = m[match(terms, rownames(m)), 2]
+  )
+}))
+
+print(result, row.names = FALSE, digits = 3)
+```
+
+
+## Aufgabe 10: Interpretation im gemischten Modell
+
+Der Datensatz epil aus dem R-Paket MASS enth¨alt f¨ur 59 Patienten einer randomisierten Studie die
+Anzahl y der epileptischen Anf¨alle in vier aufeinander folgenden zweiw¨ochigen Perioden. Neben y sind
+unter anderem die folgenden Variablen enthalten:
+
+```{r}
+epil <- MASS::epil
+View(epil)
+```
+
+Verwenden Sie in allen Modellen die Kovariablen lbase, trt, lage, V4 und die Interaktion lbase:trt
+sowie einen Random Intercept pro Patient.
+(a) Sch¨atzen Sie ein lineares gemischtes Modell f¨ur log(y + 1). Interpretieren Sie den Koeffizienten
+von trt konditional und marginal.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
