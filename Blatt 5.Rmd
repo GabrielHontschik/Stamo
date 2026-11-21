@@ -141,10 +141,20 @@ View(epil)
 
 Verwenden Sie in allen Modellen die Kovariablen lbase, trt, lage, V4 und die Interaktion lbase:trt
 sowie einen Random Intercept pro Patient.
+
 (a) Sch¨atzen Sie ein lineares gemischtes Modell f¨ur log(y + 1). Interpretieren Sie den Koeffizienten
 von trt konditional und marginal.
 
+```{r}
 
+mod <- lmer(
+  log(y + 1) ~ lbase * trt + lage + V4 + (1 | subject),
+  data = epil
+)
+
+summary(mod)
+
+```
 
 
 
